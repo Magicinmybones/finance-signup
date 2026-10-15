@@ -4,6 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Create Finance account</title>
+<script>
+if ('animate' in Element.prototype && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  document.documentElement.classList.add('entrance-pending');
+  window.__financeEntranceFallback = setTimeout(() => {
+    if (window.__financeEntranceFinish) window.__financeEntranceFinish();
+    else document.documentElement.classList.remove('entrance-pending');
+  }, 3200);
+}
+</script>
 <style>
 /* Urbanist font assets */
 @font-face{font-family:"Urbanist";font-style:normal;font-weight:300;font-display:block;src:url(assets/urbanist-300.woff2) format("woff2");}
@@ -281,6 +290,33 @@ form{ margin:0; }
   :root{ --u: min(calc(100vw / 847), max(calc(100dvh / 590), 0.9px)); }
 }
 
+/* Initial states only. Removing entrance-pending restores every authored style. */
+.entrance-pending .title{
+  opacity:0; transform:translateY(calc(8 * var(--u)));
+  clip-path:inset(0 0 100% 0);
+}
+.entrance-pending .sub,
+.entrance-pending .label,
+.entrance-pending .field,
+.entrance-pending .btn{
+  opacity:0; transform:translateY(calc(5 * var(--u)));
+}
+.entrance-pending .legal{ opacity:0; }
+@media (min-width:701px) and (min-aspect-ratio:1/1){
+  .entrance-pending .card-a{
+    opacity:0; transform:translateY(calc(6 * var(--u))) scale(.97);
+  }
+  .entrance-pending .card-b{
+    opacity:0; transform:translateY(calc(8 * var(--u))) scale(.985);
+  }
+  .entrance-pending .hero{
+    opacity:0; transform:translateY(calc(6 * var(--u)));
+    clip-path:inset(0 0 100% 0);
+  }
+  .entrance-pending .blurb{
+    opacity:0; transform:translateY(calc(5 * var(--u)));
+  }
+}
 @media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
 </style>
 </head>
@@ -371,5 +407,68 @@ form{ margin:0; }
     </section>
   </div>
 </main>
+<script>
+(() => {
+  if (!document.documentElement.classList.contains('entrance-pending')) return;
+
+  const animations = [];
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    clearTimeout(window.__financeEntranceFallback);
+    document.documentElement.classList.remove('entrance-pending');
+    animations.forEach(animation => animation.cancel());
+    delete window.__financeEntranceFinish;
+    delete window.__financeEntranceFallback;
+  };
+  window.__financeEntranceFinish = finish;
+
+  const start = () => {
+    try {
+      const unit = document.querySelector('.panel--form .frame').getBoundingClientRect().width / 357;
+      const y = amount => `translateY(${(amount * unit).toFixed(2)}px)`;
+      const curve = 'cubic-bezier(.22,.72,.18,1)';
+      const reveal = (selector, from, delay, duration) => {
+        const element = document.querySelector(selector);
+        if (!element) return;
+        animations.push(element.animate([from, { opacity:1, transform:'none', clipPath:'none' }], {
+          delay, duration, easing:curve, fill:'both'
+        }));
+      };
+
+      // The form establishes the purpose, then controls settle in related pairs.
+      reveal('.title', { opacity:0, transform:y(8), clipPath:'inset(0 0 100% 0)' }, 70, 720);
+      reveal('.sub', { opacity:0, transform:y(5) }, 290, 570);
+      reveal('label[for="email"]', { opacity:0, transform:y(5) }, 550, 480);
+      reveal('#email', { opacity:0, transform:y(5) }, 550, 540);
+      reveal('label[for="password"]', { opacity:0, transform:y(5) }, 690, 480);
+      reveal('#password', { opacity:0, transform:y(5) }, 690, 540);
+      reveal('.btn--primary', { opacity:0, transform:y(5) }, 940, 480);
+      reveal('.btn--ghost:nth-of-type(1)', { opacity:0, transform:y(5) }, 1090, 480);
+      reveal('.btn--ghost:nth-of-type(2)', { opacity:0, transform:y(5) }, 1170, 480);
+      reveal('.legal', { opacity:0, transform:'none' }, 1340, 340);
+
+      // The showcase is below the opening viewport on narrow screens.
+      if (matchMedia('(min-width:701px) and (min-aspect-ratio:1/1)').matches) {
+        reveal('.card-b', { opacity:0, transform:`${y(8)} scale(.985)` }, 440, 780);
+        reveal('.card-a', { opacity:0, transform:`${y(6)} scale(.97)` }, 610, 760);
+        reveal('.hero', { opacity:0, transform:y(6), clipPath:'inset(0 0 100% 0)' }, 900, 660);
+        reveal('.blurb', { opacity:0, transform:y(5) }, 1160, 520);
+      }
+
+      Promise.all(animations.map(animation => animation.finished)).then(finish, finish);
+    } catch (_) {
+      finish();
+    }
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once:true });
+  } else {
+    start();
+  }
+})();
+</script>
 </body>
 </html>
